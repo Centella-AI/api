@@ -2,6 +2,8 @@ from typing import Union
 from pydantic import BaseModel
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from rdkit import Chem
+from rdkit.Chem import Crippen, Descriptors, Lipinski, QED, MolSurf,Draw
 
 app = FastAPI()
 
@@ -38,4 +40,15 @@ async def read_item(tid: int, q: Union[str, None] = None):
 
 @app.post("/predictsmile")
 def read_item(d: Smile):
-    return {"data":{"smile": d.smile}}
+    mol = Chem.MolFromSmiles(d.smile)
+    logp = Crippen.MolLogP(mol)
+    tpsa = Descriptors.TPSA(mol)
+    mw = Descriptors.MolWt(mol)
+    hbd = Lipinski.NumHDonors(mol)
+    hba = Lipinski.NumHAcceptors(mol)
+    rotb = Lipinski.NumRotatableBonds(mol)
+    bioavail = QED.qed(mol)
+    tox_pred = 0 # toxicity.predict(mol)
+    permeability =0 # MolSurf.pyTPSA(mol)
+    img = Draw.MolToImage(mol)
+    return {"2d":img,"predict":[{"name":"LogP","value":logp},{"name":"TPSA","value":tpsa},{"name":"Molecular Weight","value":mw},{"name":"Number of H-Bond Donors","value":hbd},{"name":"Number of H-Bond Acceptors","value":hba},{"name":"Number of Rotatable Bonds","value":rotb},{"name":"Bioavailability Score","value":bioavail},{"name":"Toxicity Prediction","value":tox_pred},{"name":"Permeability Score","value":permeability}]}
